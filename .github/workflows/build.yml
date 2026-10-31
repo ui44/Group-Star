@@ -21,29 +21,38 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Android SDK manually
+      - name: Setup Android SDK
         run: |
-          # Download command line tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdtools.zip
           mkdir -p $HOME/android-sdk/cmdline-tools
           unzip -q cmdtools.zip -d $HOME/android-sdk/cmdline-tools
           mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-          # Accept licenses and install components
-          yes | sdkmanager --sdk_root=$HOME/android-sdk --licenses || true
-          sdkmanager --sdk_root=$HOME/android-sdk "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses || true
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      - name: Install Gradle 8.4
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O gradle.zip
+          sudo unzip -q gradle.zip -d /opt/gradle
+          echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
+
+      - name: Generate Gradle Wrapper
+        run: |
+          gradle wrapper --gradle-version 8.4 --distribution-type bin
+          chmod +x gradlew
+          ls -la gradle/wrapper/
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: |
+          export ANDROID_HOME=$HOME/android-sdk
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
 
-      - name: Collect APKs
+      - name: Collect APK
         run: |
           mkdir -p artifacts
           find app/build/outputs/apk/debug -name "*.apk" -exec cp {} artifacts/GroupStar-debug.apk \;
@@ -75,7 +84,7 @@ jobs:
             | 🔊 WebView Unlocked | بدون حدود متصفح، صوت أقوى |
 
             ### تثبيت:
-            1. حمّل **`GroupStar-debug.apk`** من هنا
+            1. حمّل **`GroupStar-debug.apk`** من الأسفل
             2. فعّل **"مصادر غير معروفة"** في إعدادات الأمان
             3. ثبّت وشغّل
             4. حط التوكن وادخل 🎉
