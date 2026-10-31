@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     android:background="@color/bg_dark">
 
-    <!-- WebView — يأخذ كل الشاشة -->
     <WebView
         android:id="@+id/webview"
         android:layout_width="0dp"
@@ -16,7 +15,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- شريط التحكم السفلي -->
     <LinearLayout
         android:id="@+id/control_bar"
         android:layout_width="0dp"
@@ -29,29 +27,26 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- زر Fake Deafen -->
         <ImageButton
             android:id="@+id/btn_fake_deafen"
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/btn_circle_bg"
             android:src="@drawable/ic_deafen_off"
-            android:colorFilter="@color/accent_white"
+            android:tint="@color/accent_white"
             android:contentDescription="Fake Deafen"
             android:layout_marginHorizontal="4dp"/>
 
-        <!-- زر المايك -->
         <ImageButton
             android:id="@+id/btn_mic"
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/btn_circle_bg"
             android:src="@drawable/ic_mic_off"
-            android:colorFilter="@color/accent_white"
+            android:tint="@color/accent_white"
             android:contentDescription="Microphone"
             android:layout_marginHorizontal="4dp"/>
 
-        <!-- Status text -->
         <TextView
             android:id="@+id/tv_status"
             android:layout_width="0dp"
@@ -60,17 +55,15 @@
             android:gravity="center"
             android:text="جار التحميل..."
             android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:fontFamily="sans-serif"/>
+            android:textSize="11sp"/>
 
-        <!-- زر الحسابات -->
         <ImageButton
             android:id="@+id/btn_accounts"
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/btn_circle_bg"
             android:src="@android:drawable/ic_menu_manage"
-            android:colorFilter="@color/accent_white"
+            android:tint="@color/accent_white"
             android:contentDescription="Accounts"
             android:layout_marginHorizontal="4dp"/>
 
