@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark">
+
+    <!-- WebView — يأخذ كل الشاشة -->
+    <WebView
+        android:id="@+id/webview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/control_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- شريط التحكم السفلي -->
+    <LinearLayout
+        android:id="@+id/control_bar"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:background="@color/bg_bar"
+        android:paddingHorizontal="8dp"
+        android:gravity="center_vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- زر Fake Deafen -->
+        <ImageButton
+            android:id="@+id/btn_fake_deafen"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/btn_circle_bg"
+            android:src="@drawable/ic_deafen_off"
+            android:colorFilter="@color/accent_white"
+            android:contentDescription="Fake Deafen"
+            android:layout_marginHorizontal="4dp"/>
+
+        <!-- زر المايك -->
+        <ImageButton
+            android:id="@+id/btn_mic"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/btn_circle_bg"
+            android:src="@drawable/ic_mic_off"
+            android:colorFilter="@color/accent_white"
+            android:contentDescription="Microphone"
+            android:layout_marginHorizontal="4dp"/>
+
+        <!-- Status text -->
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="جار التحميل..."
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif"/>
+
+        <!-- زر الحسابات -->
+        <ImageButton
+            android:id="@+id/btn_accounts"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/btn_circle_bg"
+            android:src="@android:drawable/ic_menu_manage"
+            android:colorFilter="@color/accent_white"
+            android:contentDescription="Accounts"
+            android:layout_marginHorizontal="4dp"/>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

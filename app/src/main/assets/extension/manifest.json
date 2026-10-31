@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "ツcore",
+  "version": "3.17.0",
+  "description": "ツcore — clean voice, auto mic level, louder music. By ツ / __518_ — C0za",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    },
+    "default_title": "ツcore"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://discord.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://discord.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "injector.js",
+        "icon16.png",
+        "icon48.png",
+        "icon128.png",
+        "gojo.gif",
+        "skin/*"
+      ],
+      "matches": [
+        "*://discord.com/*"
+      ]
+    }
+  ]
+}
