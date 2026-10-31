@@ -23,36 +23,28 @@ jobs:
           cache: gradle
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 11076708
+        uses: android-actions/setup-android@v2
 
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses || true
-
-      - name: Install build tools
+      - name: Install Android SDK components
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          yes | sdkmanager --licenses || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
-      - name: Setup Gradle Wrapper
-        run: |
-          gradle wrapper --gradle-version 8.4 --distribution-type bin
-          chmod +x ./gradlew
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
-      - name: Sign Release APK (with debug keystore)
+      - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
-      - name: Collect APKs
+      - name: Rename APKs
         run: |
           mkdir -p artifacts
-          find app/build/outputs/apk -name "*.apk" -exec cp {} artifacts/ \;
+          find app/build/outputs/apk -name "*.apk" | while read f; do
+            cp "$f" "artifacts/$(basename $f)"
+          done
           ls -la artifacts/
 
       - name: Upload APK Artifact
@@ -63,7 +55,7 @@ jobs:
           retention-days: 30
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ github.run_number }}
           name: "GroupStar v${{ github.run_number }}"
@@ -81,13 +73,10 @@ jobs:
             | 🔊 WebView Unlocked | بدون حدود متصفح، صوت أقوى |
 
             ### تثبيت:
-            1. حمّل `GroupStar-release.apk` أو `GroupStar-debug.apk`
+            1. حمّل `app-debug.apk`
             2. فعّل **"مصادر غير معروفة"** في إعدادات الأمان
             3. ثبّت وشغّل
             4. حط التوكن وادخل 🎉
-
-            ### ملاحظة:
-            > ملف `release.apk` مبني بـ debug keystore — يشتغل عادي
           files: artifacts/*.apk
           draft: false
           prerelease: false
