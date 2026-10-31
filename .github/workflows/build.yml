@@ -20,15 +20,22 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-
-      - name: Install Android SDK components
+      - name: Install Android SDK manually
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          # Download command line tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdtools.zip
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          unzip -q cmdtools.zip -d $HOME/android-sdk/cmdline-tools
+          mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+          # Accept licenses and install components
+          yes | sdkmanager --sdk_root=$HOME/android-sdk --licenses || true
+          sdkmanager --sdk_root=$HOME/android-sdk "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
@@ -36,22 +43,17 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon
-
-      - name: Rename APKs
+      - name: Collect APKs
         run: |
           mkdir -p artifacts
-          find app/build/outputs/apk -name "*.apk" | while read f; do
-            cp "$f" "artifacts/$(basename $f)"
-          done
+          find app/build/outputs/apk/debug -name "*.apk" -exec cp {} artifacts/GroupStar-debug.apk \;
           ls -la artifacts/
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: GroupStar-APK
-          path: artifacts/*.apk
+          path: artifacts/GroupStar-debug.apk
           retention-days: 30
 
       - name: Create GitHub Release
@@ -73,11 +75,11 @@ jobs:
             | 🔊 WebView Unlocked | بدون حدود متصفح، صوت أقوى |
 
             ### تثبيت:
-            1. حمّل `app-debug.apk`
+            1. حمّل **`GroupStar-debug.apk`** من هنا
             2. فعّل **"مصادر غير معروفة"** في إعدادات الأمان
             3. ثبّت وشغّل
             4. حط التوكن وادخل 🎉
-          files: artifacts/*.apk
+          files: artifacts/GroupStar-debug.apk
           draft: false
           prerelease: false
         env:
