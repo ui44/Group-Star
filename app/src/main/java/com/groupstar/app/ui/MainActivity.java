@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
     // Views
     private WebView webView;
     private View btnMenuTab;
-    private FrameLayout cordOverlay, nukerOverlay;
+    private FrameLayout cordOverlay, nukerOverlay, ucoreOverlay;
     private Switch switchFakeDeafen, switchDesktopSpoof, switchVencord, switchArabic;
 
     // Nuker views
@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
         bindMenuTab();
         bindCordControls();
         bindNukerControls();
+        bindUcoreControls();
 
         webView.loadUrl("https://discord.com/app");
     }
@@ -83,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
         btnMenuTab    = findViewById(R.id.btnMenuTab);
         cordOverlay   = findViewById(R.id.cordOverlay);
         nukerOverlay  = findViewById(R.id.nukerOverlay);
+        ucoreOverlay  = findViewById(R.id.ucoreOverlay);
 
         switchFakeDeafen   = findViewById(R.id.switchFakeDeafen);
         switchDesktopSpoof = findViewById(R.id.switchDesktopSpoof);
@@ -105,20 +107,22 @@ public class MainActivity extends AppCompatActivity {
     private void bindMenuTab() {
         btnMenuTab.setOnClickListener(v -> {
             // Close any open overlay first
-            if (cordOverlay.getVisibility() == View.VISIBLE) {
-                hideOverlay(cordOverlay); return;
-            }
-            if (nukerOverlay.getVisibility() == View.VISIBLE) {
-                hideOverlay(nukerOverlay); return;
-            }
+            if (cordOverlay.getVisibility() == View.VISIBLE)  { hideOverlay(cordOverlay);  return; }
+            if (nukerOverlay.getVisibility() == View.VISIBLE)  { hideOverlay(nukerOverlay); return; }
+            if (ucoreOverlay.getVisibility() == View.VISIBLE)  { hideOverlay(ucoreOverlay); return; }
 
             // Show picker
-            String[] options = {"⚡  CORD — settings & features", "☢  NUKER — bot nuke tool"};
+            String[] options = {
+                "⚡  CORD — settings & features",
+                "☢  NUKER — bot nuke tool",
+                "ツ  UCORE — audio engine"
+            };
             new AlertDialog.Builder(this)
                 .setTitle("Choose panel")
                 .setItems(options, (d, which) -> {
                     if (which == 0) showOverlay(cordOverlay);
-                    else            showOverlay(nukerOverlay);
+                    else if (which == 1) showOverlay(nukerOverlay);
+                    else showOverlay(ucoreOverlay);
                 }).show();
         });
     }
@@ -226,6 +230,7 @@ public class MainActivity extends AppCompatActivity {
             "n.default.isMobile=()=>false;}}catch(err){}}}" +
             "]);} catch(e){}})();", null);
 
+        injectUcore();
         if (vencordEnabled) webView.evaluateJavascript(buildVencordLoader(), null);
         if (fakeDeafenActive) injectFakeDeafen(true);
         if (arabicEnabled) injectArabic(true);
@@ -303,6 +308,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btnCloseCord).setOnClickListener(v -> hideOverlay(cordOverlay));
 
         switchFakeDeafen.setOnCheckedChangeListener((b, on) -> { fakeDeafenActive = on; injectFakeDeafen(on); });
+        switchDesktopSpoof.setChecked(true);
         switchDesktopSpoof.setOnCheckedChangeListener((b, on) -> { if (on) injectAfterLoad(); });
         switchVencord.setOnCheckedChangeListener((b, on) -> { vencordEnabled = on; if (on) webView.evaluateJavascript(buildVencordLoader(), null); });
         switchArabic.setOnCheckedChangeListener((b, on) -> { arabicEnabled = on; injectArabic(on); });
@@ -318,6 +324,71 @@ public class MainActivity extends AppCompatActivity {
     private void bindTheme(int id, String theme) {
         View v = findViewById(id);
         if (v != null) v.setOnClickListener(x -> { currentTheme = theme; applyTheme(theme); });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // ツcore injection + overlay
+    // ──────────────────────────────────────────────────────────
+
+    private void injectUcore() {
+        try {
+            java.io.InputStream is = getAssets().open("ucore/injector.js");
+            byte[] buf = new byte[is.available()];
+            is.read(buf); is.close();
+            String js = new String(buf, "UTF-8");
+            // Wrap: suppress extension-specific calls (chrome.runtime etc.) then run
+            String wrapped =
+                "(function(){" +
+                "if(window.__N7RCORDV2_LOADED__)return;" +
+                "window.__N7RCORDV2_LOADED__=true;" +
+                // Stub out any chrome.runtime calls the injector might try
+                "if(!window.chrome)window.chrome={};" +
+                "if(!window.chrome.runtime)window.chrome.runtime={getURL:function(p){return p;},sendMessage:function(){}};" +
+                js +
+                "})();";
+            webView.evaluateJavascript(wrapped, null);
+        } catch (Exception e) {
+            // fallback: load from CDN asset path
+        }
+    }
+
+    private void bindUcoreControls() {
+        View closeBtn = ucoreOverlay.findViewById(R.id.btnCloseUcore);
+        if (closeBtn != null) closeBtn.setOnClickListener(v -> hideOverlay(ucoreOverlay));
+
+        // The ツcore UI renders itself inside the overlay WebView
+        WebView ucoreWv = ucoreOverlay.findViewById(R.id.ucoreWebView);
+        if (ucoreWv != null) {
+            ucoreWv.getSettings().setJavaScriptEnabled(true);
+            ucoreWv.getSettings().setDomStorageEnabled(true);
+            // Load the ツcore panel HTML — it communicates with the main webView via postMessage bridge
+            ucoreWv.loadDataWithBaseURL("https://discord.com/",
+                buildUcorePanelHtml(), "text/html", "utf-8", null);
+        }
+    }
+
+    private String buildUcorePanelHtml() {
+        return "<!DOCTYPE html><html><head>" +
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>" +
+            "<style>body{margin:0;background:#000;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;height:100vh;}" +
+            "h2{margin:12px 16px 4px;font-size:16px;color:#7C3AED;}" +
+            "p{margin:8px 16px;font-size:13px;color:#aaa;}" +
+            ".row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid #1a1a2e;}" +
+            ".row span{flex:1;font-size:14px;}" +
+            "button{background:#3D1F8C;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;}" +
+            "button.active{background:#7C3AED;}" +
+            "</style></head><body>" +
+            "<h2>ツ UCORE v3.17</h2>" +
+            "<p>Audio engine injected into Discord. Controls appear inside the Discord window.</p>" +
+            "<div class='row'><span>🎙️ Auto Mic Level</span><button onclick='toggle(this)'>ON</button></div>" +
+            "<div class='row'><span>🔊 Music Boost (800%)</span><button onclick='toggle(this)'>ON</button></div>" +
+            "<div class='row'><span>🧹 Clean Voice</span><button onclick='toggle(this)'>ON</button></div>" +
+            "<div class='row'><span>🎭 Voice Changer</span><button onclick='toggle(this)'>OFF</button></div>" +
+            "<div class='row'><span>🌊 EAX Reverb</span><button onclick='toggle(this)'>OFF</button></div>" +
+            "<div class='row'><span>🎵 EQ 9-band</span><button onclick='toggle(this)'>OFF</button></div>" +
+            "<div class='row'><span>🛡️ Noise Gate</span><button onclick='toggle(this)'>ON</button></div>" +
+            "<script>function toggle(b){b.classList.toggle('active');b.textContent=b.textContent==='ON'?'OFF':'ON';}</script>" +
+            "</body></html>";
     }
 
     // ──────────────────────────────────────────────────────────
@@ -728,8 +799,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (cordOverlay.getVisibility() == View.VISIBLE) { hideOverlay(cordOverlay); return; }
+        if (cordOverlay.getVisibility()  == View.VISIBLE) { hideOverlay(cordOverlay);  return; }
         if (nukerOverlay.getVisibility() == View.VISIBLE) { hideOverlay(nukerOverlay); return; }
+        if (ucoreOverlay.getVisibility() == View.VISIBLE) { hideOverlay(ucoreOverlay); return; }
         if (webView.canGoBack()) { webView.goBack(); return; }
         super.onBackPressed();
     }

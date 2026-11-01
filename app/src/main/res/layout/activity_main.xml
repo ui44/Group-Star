@@ -333,4 +333,55 @@
         </LinearLayout>
     </FrameLayout>
 
+    <!-- ツCORE full-screen overlay -->
+    <FrameLayout
+        android:id="@+id/ucoreOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#EE000000"
+        android:visibility="gone"
+        android:elevation="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#0A0010"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#110022"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="ツ  UCORE v3.17"
+                    android:textColor="#7C3AED"
+                    android:textSize="20sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/btnCloseUcore"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:text="✕"
+                    android:textColor="#AAAAAA"
+                    android:textSize="20sp"
+                    android:gravity="center"/>
+            </LinearLayout>
+
+            <WebView
+                android:id="@+id/ucoreWebView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+        </LinearLayout>
+    </FrameLayout>
+
 </FrameLayout>
