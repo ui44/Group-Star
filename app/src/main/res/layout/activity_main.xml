@@ -4,284 +4,333 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- WebView — full screen -->
+    <!-- WebView — full screen, no title bar, no address bar -->
     <WebView
         android:id="@+id/webView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
-    <!-- Right-side tab buttons (always visible) -->
+    <!-- Single arrow tab — right edge, vertically centered -->
     <LinearLayout
-        android:id="@+id/tabButtons"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:id="@+id/btnMenuTab"
+        android:layout_width="28dp"
+        android:layout_height="56dp"
         android:layout_gravity="center_vertical|end"
+        android:background="@drawable/tab_arrow_bg"
         android:orientation="vertical"
-        android:layout_marginEnd="0dp">
+        android:gravity="center"
+        android:elevation="8dp">
 
-        <!-- CORD button -->
-        <LinearLayout
-            android:id="@+id/btnCordTab"
-            android:layout_width="32dp"
-            android:layout_height="72dp"
-            android:background="@drawable/tab_arrow_bg"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginBottom="4dp">
-
-            <ImageView
-                android:id="@+id/arrowCord"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_arrow_tab"
-                android:tint="#FFFFFF"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="C"
-                android:textColor="#FFFFFF"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:layout_marginTop="2dp"/>
-        </LinearLayout>
-
-        <!-- NUKER button -->
-        <LinearLayout
-            android:id="@+id/btnNukerTab"
-            android:layout_width="32dp"
-            android:layout_height="72dp"
-            android:background="@drawable/tab_nuker_bg"
-            android:orientation="vertical"
-            android:gravity="center">
-
-            <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_skull"
-                android:tint="#FFFFFF"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="N"
-                android:textColor="#FFFFFF"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:layout_marginTop="2dp"/>
-        </LinearLayout>
+        <ImageView
+            android:id="@+id/tabArrow"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_arrow_tab"
+            android:tint="#FFFFFF"/>
     </LinearLayout>
 
-    <!-- CORD Side Panel -->
-    <LinearLayout
-        android:id="@+id/cordPanel"
-        android:layout_width="240dp"
+    <!-- CORD full-screen overlay (hidden by default) -->
+    <FrameLayout
+        android:id="@+id/cordOverlay"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="end"
-        android:background="@drawable/side_panel_bg"
-        android:orientation="vertical"
-        android:padding="12dp"
-        android:translationX="240dp"
-        android:visibility="visible"
-        android:elevation="12dp">
+        android:background="#CC000000"
+        android:visibility="gone"
+        android:elevation="16dp">
 
-        <!-- Panel header -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⚡ CORD"
-            android:textColor="#7C3AED"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#7C3AED"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- Fake Deafen Row -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
+            android:layout_width="300dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:background="@drawable/side_panel_bg"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🎧 Fake Deafen"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"/>
-
-            <Switch
-                android:id="@+id/switchFakeDeafen"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="false"
-                android:thumbTint="#7C3AED"
-                android:trackTint="#3D1F8C"/>
-        </LinearLayout>
-
-        <!-- Desktop Spoof Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🖥️ Desktop Spoof"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"/>
-
-            <Switch
-                android:id="@+id/switchDesktopSpoof"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:thumbTint="#7C3AED"
-                android:trackTint="#3D1F8C"/>
-        </LinearLayout>
-
-        <!-- Vencord Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="⚙️ Vencord"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"/>
-
-            <Switch
-                android:id="@+id/switchVencord"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:thumbTint="#7C3AED"
-                android:trackTint="#3D1F8C"/>
-        </LinearLayout>
-
-        <!-- Arabic Language Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🌐 Arabic Lang"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"/>
-
-            <Switch
-                android:id="@+id/switchArabic"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="false"
-                android:thumbTint="#7C3AED"
-                android:trackTint="#3D1F8C"/>
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#2A2A3E"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- Theme label -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🎨 Theme"
-            android:textColor="#AAAACC"
-            android:textSize="11sp"
-            android:layout_marginBottom="4dp"/>
-
-        <!-- Theme selector -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
-
+            <!-- Header -->
             <LinearLayout
-                android:id="@+id/themeRow"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
 
-                <TextView android:id="@+id/themeDefault"
-                    android:layout_width="52dp" android:layout_height="28dp"
-                    android:text="Default" android:textColor="#FFFFFF"
-                    android:textSize="9sp" android:gravity="center"
-                    android:background="#5865F2" android:layout_marginEnd="4dp"/>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="⚡ CORD"
+                    android:textColor="#7C3AED"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
 
-                <TextView android:id="@+id/themeOneDark"
-                    android:layout_width="52dp" android:layout_height="28dp"
-                    android:text="OneDark" android:textColor="#FFFFFF"
-                    android:textSize="9sp" android:gravity="center"
-                    android:background="#282C34" android:layout_marginEnd="4dp"/>
-
-                <TextView android:id="@+id/themeMidnight"
-                    android:layout_width="52dp" android:layout_height="28dp"
-                    android:text="Midnight" android:textColor="#FFFFFF"
-                    android:textSize="9sp" android:gravity="center"
-                    android:background="#0D0D0D" android:layout_marginEnd="4dp"/>
-
-                <TextView android:id="@+id/themePurple"
-                    android:layout_width="52dp" android:layout_height="28dp"
-                    android:text="Purple" android:textColor="#FFFFFF"
-                    android:textSize="9sp" android:gravity="center"
-                    android:background="#7C3AED"/>
+                <TextView
+                    android:id="@+id/btnCloseCord"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:text="✕"
+                    android:textColor="#AAAAAA"
+                    android:textSize="18sp"
+                    android:gravity="center"/>
             </LinearLayout>
-        </HorizontalScrollView>
 
-        <View
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="#7C3AED" android:layout_marginBottom="16dp"/>
+
+            <!-- Fake Deafen -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="🎧  Fake Deafen"
+                    android:textColor="#FFFFFF" android:textSize="14sp"/>
+                <Switch android:id="@+id/switchFakeDeafen"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:checked="false" android:thumbTint="#7C3AED" android:trackTint="#3D1F8C"/>
+            </LinearLayout>
+
+            <!-- Desktop Spoof -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="🖥️  Desktop Spoof"
+                    android:textColor="#FFFFFF" android:textSize="14sp"/>
+                <Switch android:id="@+id/switchDesktopSpoof"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:checked="true" android:thumbTint="#7C3AED" android:trackTint="#3D1F8C"/>
+            </LinearLayout>
+
+            <!-- Vencord -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="⚙️  Vencord"
+                    android:textColor="#FFFFFF" android:textSize="14sp"/>
+                <Switch android:id="@+id/switchVencord"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:checked="true" android:thumbTint="#7C3AED" android:trackTint="#3D1F8C"/>
+            </LinearLayout>
+
+            <!-- Arabic -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="🌐  Arabic Language"
+                    android:textColor="#FFFFFF" android:textSize="14sp"/>
+                <Switch android:id="@+id/switchArabic"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:checked="false" android:thumbTint="#7C3AED" android:trackTint="#3D1F8C"/>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="#2A2A3E" android:layout_marginBottom="12dp"/>
+
+            <!-- Theme -->
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="🎨  Theme" android:textColor="#AAAACC"
+                android:textSize="13sp" android:layout_marginBottom="8dp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginBottom="16dp">
+                <TextView android:id="@+id/themeDefault"
+                    android:layout_width="0dp" android:layout_height="32dp" android:layout_weight="1"
+                    android:text="Default" android:textColor="#FFFFFF" android:textSize="10sp"
+                    android:gravity="center" android:background="#5865F2" android:layout_marginEnd="4dp"/>
+                <TextView android:id="@+id/themeOneDark"
+                    android:layout_width="0dp" android:layout_height="32dp" android:layout_weight="1"
+                    android:text="OneDark" android:textColor="#FFFFFF" android:textSize="10sp"
+                    android:gravity="center" android:background="#282C34" android:layout_marginEnd="4dp"/>
+                <TextView android:id="@+id/themeMidnight"
+                    android:layout_width="0dp" android:layout_height="32dp" android:layout_weight="1"
+                    android:text="Midnight" android:textColor="#FFFFFF" android:textSize="10sp"
+                    android:gravity="center" android:background="#0D0D0D" android:layout_marginEnd="4dp"/>
+                <TextView android:id="@+id/themePurple"
+                    android:layout_width="0dp" android:layout_height="32dp" android:layout_weight="1"
+                    android:text="Purple" android:textColor="#FFFFFF" android:textSize="10sp"
+                    android:gravity="center" android:background="#7C3AED"/>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="#2A2A3E" android:layout_marginBottom="12dp"/>
+
+            <!-- Accounts -->
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="👤  Accounts" android:textColor="#AAAACC"
+                android:textSize="13sp" android:layout_marginBottom="8dp"/>
+
+            <Button android:id="@+id/btnManageAccounts"
+                android:layout_width="match_parent" android:layout_height="40dp"
+                android:text="Manage Accounts" android:textSize="13sp"
+                android:textColor="#FFFFFF" android:background="#3D1F8C"/>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- NUKER full-screen overlay (hidden by default) -->
+    <FrameLayout
+        android:id="@+id/nukerOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC000000"
+        android:visibility="gone"
+        android:elevation="16dp">
+
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#2A2A3E"
-            android:layout_marginBottom="8dp"/>
+            android:layout_height="match_parent"
+            android:background="#0D0D0D"
+            android:orientation="vertical">
 
-        <!-- Accounts label -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="👤 Accounts"
-            android:textColor="#AAAACC"
-            android:textSize="11sp"
-            android:layout_marginBottom="4dp"/>
+            <!-- Nuker Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#1A0000"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="14dp">
 
-        <Button
-            android:id="@+id/btnManageAccounts"
-            android:layout_width="match_parent"
-            android:layout_height="32dp"
-            android:text="Manage Accounts"
-            android:textSize="11sp"
-            android:textColor="#FFFFFF"
-            android:background="#3D1F8C"
-            android:layout_marginBottom="8dp"/>
+                <ImageView android:layout_width="22dp" android:layout_height="22dp"
+                    android:src="@drawable/ic_skull" android:tint="#FF4444"/>
 
-        <!-- Spacer -->
-        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="  NUKER"
+                    android:textColor="#FF4444" android:textSize="20sp" android:textStyle="bold"/>
 
-    </LinearLayout>
+                <TextView android:id="@+id/btnCloseNuker"
+                    android:layout_width="40dp" android:layout_height="40dp"
+                    android:text="✕" android:textColor="#AAAAAA"
+                    android:textSize="20sp" android:gravity="center"/>
+            </LinearLayout>
+
+            <!-- Nuker body — scrollable -->
+            <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+                android:layout_weight="1" android:padding="14dp">
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Step 1: Token -->
+                    <LinearLayout android:id="@+id/stepToken"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="Bot Token" android:textColor="#AAAAAA"
+                            android:textSize="12sp" android:layout_marginBottom="6dp"/>
+
+                        <EditText android:id="@+id/etBotToken"
+                            android:layout_width="match_parent" android:layout_height="44dp"
+                            android:background="#1E1E1E" android:textColor="#FFFFFF"
+                            android:textColorHint="#555555" android:hint="Enter bot token..."
+                            android:textSize="13sp" android:padding="10dp"
+                            android:inputType="textPassword" android:singleLine="true"/>
+
+                        <Button android:id="@+id/btnFetchServers"
+                            android:layout_width="match_parent" android:layout_height="40dp"
+                            android:text="Fetch Servers →" android:textSize="13sp"
+                            android:textColor="#FFFFFF" android:background="#8B0000"
+                            android:layout_marginTop="10dp"/>
+                    </LinearLayout>
+
+                    <!-- Step 2: Server list -->
+                    <LinearLayout android:id="@+id/stepServers"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:visibility="gone"
+                        android:layout_marginTop="10dp">
+
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="Select Server" android:textColor="#AAAAAA"
+                            android:textSize="12sp" android:layout_marginBottom="6dp"/>
+
+                        <ListView android:id="@+id/serverList"
+                            android:layout_width="match_parent" android:layout_height="200dp"
+                            android:background="#1E1E1E" android:divider="#333333"
+                            android:dividerHeight="1dp"/>
+                    </LinearLayout>
+
+                    <!-- Step 3: Operations -->
+                    <LinearLayout android:id="@+id/stepOps"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:visibility="gone"
+                        android:layout_marginTop="10dp">
+
+                        <TextView android:id="@+id/tvSelectedServer"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="Server: —" android:textColor="#FF4444"
+                            android:textSize="13sp" android:textStyle="bold"
+                            android:layout_marginBottom="8dp"/>
+
+                        <ScrollView android:layout_width="match_parent" android:layout_height="80dp"
+                            android:background="#0A0A0A" android:layout_marginBottom="10dp">
+                            <TextView android:id="@+id/tvLog"
+                                android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Ready." android:textColor="#44FF44"
+                                android:textSize="10sp" android:padding="6dp"
+                                android:fontFamily="monospace"/>
+                        </ScrollView>
+
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="MEMBERS" android:textColor="#666666"
+                            android:textSize="9sp" android:textStyle="bold" android:layout_marginBottom="4dp"/>
+
+                        <GridLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:columnCount="2" android:layout_marginBottom="8dp">
+                            <Button android:id="@+id/btnBan" style="@style/NukerBtn" android:text="☠ Ban All"/>
+                            <Button android:id="@+id/btnKick" style="@style/NukerBtn" android:text="👢 Kick All"/>
+                            <Button android:id="@+id/btnPrune" style="@style/NukerBtn" android:text="✂ Prune"/>
+                            <Button android:id="@+id/btnTimeout" style="@style/NukerBtn" android:text="⏱ Timeout All"/>
+                            <Button android:id="@+id/btnMassDM" style="@style/NukerBtn" android:text="📨 Mass DM"/>
+                            <Button android:id="@+id/btnRenameMembers" style="@style/NukerBtn" android:text="✏ Rename All"/>
+                        </GridLayout>
+
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="CHANNELS / ROLES" android:textColor="#666666"
+                            android:textSize="9sp" android:textStyle="bold" android:layout_marginBottom="4dp"/>
+
+                        <GridLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:columnCount="2" android:layout_marginBottom="8dp">
+                            <Button android:id="@+id/btnDelChannels" style="@style/NukerBtn" android:text="🗑 Del Channels"/>
+                            <Button android:id="@+id/btnCreateChannels" style="@style/NukerBtn" android:text="➕ Create 100ch"/>
+                            <Button android:id="@+id/btnDelRoles" style="@style/NukerBtn" android:text="🗑 Del Roles"/>
+                            <Button android:id="@+id/btnCreateRoles" style="@style/NukerBtn" android:text="➕ Create Roles"/>
+                            <Button android:id="@+id/btnRenameChannels" style="@style/NukerBtn" android:text="✏ Rename Channels"/>
+                            <Button android:id="@+id/btnRenameRoles" style="@style/NukerBtn" android:text="✏ Rename Roles"/>
+                        </GridLayout>
+
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="SERVER" android:textColor="#666666"
+                            android:textSize="9sp" android:textStyle="bold" android:layout_marginBottom="4dp"/>
+
+                        <GridLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:columnCount="2" android:layout_marginBottom="8dp">
+                            <Button android:id="@+id/btnSpam" style="@style/NukerBtn" android:text="💬 Spam"/>
+                            <Button android:id="@+id/btnWebhookSpam" style="@style/NukerBtn" android:text="🕸 Webhook Spam"/>
+                            <Button android:id="@+id/btnGiveAdmin" style="@style/NukerBtn" android:text="👑 Give Admin All"/>
+                            <Button android:id="@+id/btnRenameServer" style="@style/NukerBtn" android:text="✏ Rename Server"/>
+                            <Button android:id="@+id/btnDelEmojis" style="@style/NukerBtn" android:text="🗑 Del Emojis"/>
+                            <Button android:id="@+id/btnDisableAutomod" style="@style/NukerBtn" android:text="🔕 Disable Automod"/>
+                            <Button android:id="@+id/btnDelWebhooks" style="@style/NukerBtn" android:text="🗑 Del Webhooks"/>
+                            <Button android:id="@+id/btnLeave" style="@style/NukerBtn" android:text="🚪 Leave Server"/>
+                        </GridLayout>
+
+                        <Button android:id="@+id/btnNukeAll"
+                            android:layout_width="match_parent" android:layout_height="52dp"
+                            android:text="☢  NUKE ALL" android:textSize="18sp"
+                            android:textColor="#FFFFFF" android:textStyle="bold"
+                            android:background="#FF0000" android:layout_marginTop="8dp"/>
+
+                        <Button android:id="@+id/btnBackToServers"
+                            android:layout_width="match_parent" android:layout_height="36dp"
+                            android:text="← Back to Servers" android:textSize="12sp"
+                            android:textColor="#888888" android:background="@android:color/transparent"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
+    </FrameLayout>
 
 </FrameLayout>
