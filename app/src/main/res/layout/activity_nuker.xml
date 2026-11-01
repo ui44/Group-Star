@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D0D0D"
+    android:orientation="vertical"
+    android:padding="0dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1A0000"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_skull"
+            android:tint="#FF4444"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text=" NUKER"
+            android:textColor="#FF4444"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginStart="8dp"/>
+
+        <TextView
+            android:id="@+id/btnClose"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✕"
+            android:textColor="#888888"
+            android:textSize="18sp"
+            android:padding="4dp"/>
+    </LinearLayout>
+
+    <!-- Main content - scrollable -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Step 1: Token input -->
+            <LinearLayout
+                android:id="@+id/stepToken"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bot Token"
+                    android:textColor="#AAAAAA"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp"/>
+
+                <EditText
+                    android:id="@+id/etBotToken"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="#1E1E1E"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#555555"
+                    android:hint="Bot token..."
+                    android:textSize="12sp"
+                    android:padding="8dp"
+                    android:inputType="textPassword"
+                    android:singleLine="true"/>
+
+                <Button
+                    android:id="@+id/btnFetchServers"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:text="Fetch Servers"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    android:background="#8B0000"
+                    android:layout_marginTop="8dp"/>
+            </LinearLayout>
+
+            <!-- Step 2: Server list -->
+            <LinearLayout
+                android:id="@+id/stepServers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Select Server"
+                    android:textColor="#AAAAAA"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp"/>
+
+                <ListView
+                    android:id="@+id/serverList"
+                    android:layout_width="match_parent"
+                    android:layout_height="180dp"
+                    android:background="#1E1E1E"
+                    android:divider="#333333"
+                    android:dividerHeight="1dp"/>
+            </LinearLayout>
+
+            <!-- Step 3: Operations -->
+            <LinearLayout
+                android:id="@+id/stepOps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="12dp">
+
+                <TextView
+                    android:id="@+id/tvSelectedServer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Server: —"
+                    android:textColor="#FF4444"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- Status log -->
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="80dp"
+                    android:background="#0A0A0A"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:id="@+id/tvLog"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Ready."
+                        android:textColor="#44FF44"
+                        android:textSize="10sp"
+                        android:padding="6dp"
+                        android:fontFamily="monospace"/>
+                </ScrollView>
+
+                <!-- Operation buttons — 2 columns -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="MEMBERS"
+                    android:textColor="#666666"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp"/>
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:layout_marginBottom="8dp">
+
+                    <Button android:id="@+id/btnBan" style="@style/NukerBtn" android:text="☠ Ban All"/>
+                    <Button android:id="@+id/btnKick" style="@style/NukerBtn" android:text="👢 Kick All"/>
+                    <Button android:id="@+id/btnPrune" style="@style/NukerBtn" android:text="✂ Prune"/>
+                    <Button android:id="@+id/btnTimeout" style="@style/NukerBtn" android:text="⏱ Timeout All"/>
+                    <Button android:id="@+id/btnMassDM" style="@style/NukerBtn" android:text="📨 Mass DM"/>
+                    <Button android:id="@+id/btnRenameMembers" style="@style/NukerBtn" android:text="✏ Rename All"/>
+                </GridLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="CHANNELS / ROLES"
+                    android:textColor="#666666"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp"/>
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:layout_marginBottom="8dp">
+
+                    <Button android:id="@+id/btnDelChannels" style="@style/NukerBtn" android:text="🗑 Del Channels"/>
+                    <Button android:id="@+id/btnCreateChannels" style="@style/NukerBtn" android:text="➕ Create 100ch"/>
+                    <Button android:id="@+id/btnDelRoles" style="@style/NukerBtn" android:text="🗑 Del Roles"/>
+                    <Button android:id="@+id/btnCreateRoles" style="@style/NukerBtn" android:text="➕ Create Roles"/>
+                    <Button android:id="@+id/btnRenameChannels" style="@style/NukerBtn" android:text="✏ Rename Channels"/>
+                    <Button android:id="@+id/btnRenameRoles" style="@style/NukerBtn" android:text="✏ Rename Roles"/>
+                </GridLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="SERVER"
+                    android:textColor="#666666"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp"/>
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:layout_marginBottom="8dp">
+
+                    <Button android:id="@+id/btnSpam" style="@style/NukerBtn" android:text="💬 Spam"/>
+                    <Button android:id="@+id/btnWebhookSpam" style="@style/NukerBtn" android:text="🕸 Webhook Spam"/>
+                    <Button android:id="@+id/btnGiveAdmin" style="@style/NukerBtn" android:text="👑 Give Admin All"/>
+                    <Button android:id="@+id/btnRenameServer" style="@style/NukerBtn" android:text="✏ Rename Server"/>
+                    <Button android:id="@+id/btnDelEmojis" style="@style/NukerBtn" android:text="🗑 Del Emojis"/>
+                    <Button android:id="@+id/btnDisableAutomod" style="@style/NukerBtn" android:text="🔕 Disable Automod"/>
+                    <Button android:id="@+id/btnDelWebhooks" style="@style/NukerBtn" android:text="🗑 Del Webhooks"/>
+                    <Button android:id="@+id/btnLeave" style="@style/NukerBtn" android:text="🚪 Leave Server"/>
+                </GridLayout>
+
+                <!-- NUKE ALL — big red button -->
+                <Button
+                    android:id="@+id/btnNukeAll"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="☢ NUKE ALL"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:background="#FF0000"
+                    android:layout_marginTop="8dp"/>
+
+                <!-- Back button -->
+                <Button
+                    android:id="@+id/btnBackToServers"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:text="← Back to Servers"
+                    android:textSize="11sp"
+                    android:textColor="#888888"
+                    android:background="@android:color/transparent"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

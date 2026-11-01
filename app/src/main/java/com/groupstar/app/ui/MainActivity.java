@@ -1,785 +1,477 @@
 package com.groupstar.app.ui;
 
-import android.Manifest;
+import android.animation.ObjectAnimator;
+import android.app.AlertDialog;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.net.Uri;
-import android.os.Build;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
-import android.webkit.ConsoleMessage;
-import android.webkit.JavascriptInterface;
-import android.webkit.PermissionRequest;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.PopupMenu;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
+import android.webkit.*;
+import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.groupstar.app.NukerActivity;
 import com.groupstar.app.R;
-import com.groupstar.app.accounts.AccountManager;
-import com.groupstar.app.discord.DiscordForegroundService;
-
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "GroupStar";
-    private static final int REQ_AUDIO = 101;
-    private static final int REQ_FILE  = 102;
-
     private WebView webView;
-    private AccountManager accountManager;
+    private LinearLayout cordPanel, tabButtons;
+    private View btnCordTab, btnNukerTab;
+    private Switch switchFakeDeafen, switchDesktopSpoof, switchVencord, switchArabic;
 
-    // حالة الميزات
-    private boolean fakeDeafenOn  = false;
-    private boolean micUnlocked   = false;   // فيك ديفن + مايك مفتوح
+    private boolean cordPanelOpen   = false;
+    private boolean fakeDeafenActive = false;
+    private boolean vencordEnabled  = true;
+    private boolean desktopSpoof    = true;
+    private boolean arabicEnabled   = false;
+    private String  currentTheme    = "default";
 
-    // UI controls
-    private ImageButton btnFakeDeafen;
-    private ImageButton btnMic;
-    private ImageButton btnAccounts;
-    private TextView    tvStatus;
-
-    private ValueCallback<Uri[]> filePathCallback;
-
-    // ── وزن JS السكريبتات ────────────────────────────────────────
-    private String injectorJs  = "";
-    private String contentJs   = "";
-    private String vencordJs   = "";
+    private SharedPreferences prefs;
+    private List<String[]>    accounts = new ArrayList<>(); // {name, token}
+    private final Gson gson = new Gson();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        accountManager = new AccountManager(this);
+        prefs    = getSharedPreferences("gs_prefs", MODE_PRIVATE);
+        webView  = findViewById(R.id.webView);
+        cordPanel = findViewById(R.id.cordPanel);
+        tabButtons = findViewById(R.id.tabButtons);
+        btnCordTab  = findViewById(R.id.btnCordTab);
+        btnNukerTab = findViewById(R.id.btnNukerTab);
 
-        // تحقق من الحسابات
-        if (accountManager.isEmpty()) {
-            startActivity(new Intent(this, TokenLoginActivity.class));
-            finish();
-            return;
-        }
+        switchFakeDeafen  = findViewById(R.id.switchFakeDeafen);
+        switchDesktopSpoof = findViewById(R.id.switchDesktopSpoof);
+        switchVencord     = findViewById(R.id.switchVencord);
+        switchArabic      = findViewById(R.id.switchArabic);
 
-        // اطلب صلاحية المايك
-        requestAudioPermission();
-
-        // ابدأ الـ Foreground Service
-        Intent svc = new Intent(this, DiscordForegroundService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(svc);
-        } else {
-            startService(svc);
-        }
-
-        // ربط الـ UI
-        webView       = findViewById(R.id.webview);
-        btnFakeDeafen = findViewById(R.id.btn_fake_deafen);
-        btnMic        = findViewById(R.id.btn_mic);
-        btnAccounts   = findViewById(R.id.btn_accounts);
-        tvStatus      = findViewById(R.id.tv_status);
-
-        // تحميل السكريبتات من assets
-        loadScripts();
-
-        // إعداد WebView
+        loadAccounts();
         setupWebView();
+        bindPanelControls();
 
-        // أزرار الـ UI
-        setupButtons();
-
-        // تحميل Discord
-        loadDiscord();
+        webView.loadUrl("https://discord.com/app");
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // تحميل السكريبتات من assets
-    // ═══════════════════════════════════════════════════════════
-    private void loadScripts() {
-        injectorJs = readAsset("extension/injector.js");
-        contentJs  = readAsset("extension/content.js");
-        // Vencord loader — بيتحمل من الشبكة أو من assets
-        vencordJs  = buildVencordLoader();
-    }
+    // ──────────────────────────────────────────────────────────────────
+    // WebView setup
+    // ──────────────────────────────────────────────────────────────────
 
-    private String readAsset(String path) {
-        try (InputStream is = getAssets().open(path)) {
-            byte[] b = new byte[is.available()];
-            is.read(b);
-            return new String(b, "UTF-8");
-        } catch (Exception e) {
-            Log.e(TAG, "readAsset failed: " + path, e);
-            return "";
-        }
-    }
-
-    /**
-     * Vencord Loader — يسحب Vencord من CDN ويحقن كل البلاقن
-     */
-    private String buildVencordLoader() {
-        return "(function() {\n" +
-            "  if (window.__VENCORD_LOADED__) return;\n" +
-            "  window.__VENCORD_LOADED__ = true;\n" +
-            "  // Vencord via CDN\n" +
-            "  const script = document.createElement('script');\n" +
-            "  script.src = 'https://raw.githack.com/Vendicated/Vencord/refs/heads/main/browser/browser.js';\n" +
-            "  script.onload = function() {\n" +
-            "    console.log('[GroupStar] Vencord loaded');\n" +
-            "    enableAllPlugins();\n" +
-            "  };\n" +
-            "  script.onerror = function() {\n" +
-            "    console.warn('[GroupStar] Vencord CDN failed, trying backup');\n" +
-            "    loadVencordBackup();\n" +
-            "  };\n" +
-            "  document.head.appendChild(script);\n" +
-            "\n" +
-            "  function enableAllPlugins() {\n" +
-            "    try {\n" +
-            "      const { Vencord } = window;\n" +
-            "      if (!Vencord) return setTimeout(enableAllPlugins, 1000);\n" +
-            "      const plugins = Vencord.Plugins?.plugins;\n" +
-            "      if (!plugins) return;\n" +
-            "      Object.keys(plugins).forEach(name => {\n" +
-            "        try {\n" +
-            "          if (!Vencord.Settings.plugins[name]) Vencord.Settings.plugins[name] = {};\n" +
-            "          Vencord.Settings.plugins[name].enabled = true;\n" +
-            "          if (plugins[name].start) plugins[name].start();\n" +
-            "        } catch(e) {}\n" +
-            "      });\n" +
-            "      console.log('[GroupStar] All Vencord plugins enabled:', Object.keys(plugins).length);\n" +
-            "      window.GSBridge.onVencordReady(Object.keys(plugins).join(','));\n" +
-            "    } catch(e) { setTimeout(enableAllPlugins, 1000); }\n" +
-            "  }\n" +
-            "\n" +
-            "  function loadVencordBackup() {\n" +
-            "    const s2 = document.createElement('script');\n" +
-            "    s2.src = 'https://cdn.jsdelivr.net/gh/Vendicated/Vencord@main/browser/browser.js';\n" +
-            "    s2.onload = function() { enableAllPlugins(); };\n" +
-            "    document.head.appendChild(s2);\n" +
-            "  }\n" +
-            "})();\n";
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // إعداد WebView
-    // ═══════════════════════════════════════════════════════════
     private void setupWebView() {
-        WebSettings ws = webView.getSettings();
+        WebSettings s = webView.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
+        s.setSupportZoom(false);
+        s.setLoadWithOverviewMode(true);
+        s.setUseWideViewPort(true);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        // تفعيل كل شيء
-        ws.setJavaScriptEnabled(true);
-        ws.setDomStorageEnabled(true);
-        ws.setDatabaseEnabled(true);
-        ws.setMediaPlaybackRequiresUserGesture(false);
-        ws.setAllowFileAccess(true);
-        ws.setAllowContentAccess(true);
-        ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        ws.setCacheMode(WebSettings.LOAD_DEFAULT);
-        ws.setLoadWithOverviewMode(true);
-        ws.setUseWideViewPort(true);
-
-        // ── Desktop User-Agent + Platform Spoof ──────────────────
-        // هذا هو اللي يخلي Discord يشوفك PC
-        ws.setUserAgentString(
+        // Desktop Chrome UA — no Mobile, no Android
+        s.setUserAgentString(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) " +
-            "Chrome/120.0.0.0 Safari/537.36"
+            "Chrome/122.0.0.0 Safari/537.36"
         );
 
-        // إخفاء NavigatorInfo — Desktop
-        ws.setUserAgentString(
-            ws.getUserAgentString()
-                .replace("Mobile", "")
-                .replace("Android", "")
-        );
-
-        // تفعيل WebRTC
-        ws.setJavaScriptEnabled(true);
-
-        // رفع حدود المحتوى
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ws.setSafeBrowsingEnabled(false);
-        }
-
-        // JavaScript Bridge
+        WebView.setWebContentsDebuggingEnabled(false);
         webView.addJavascriptInterface(new GSBridge(), "GSBridge");
 
-        // WebViewClient
         webView.setWebViewClient(new WebViewClient() {
-
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
-                String url = req.getUrl().toString();
-                // ابق داخل discord.com
-                if (url.startsWith("https://discord.com") || url.startsWith("https://canary.discord.com")) {
-                    return false;
-                }
-                // افتح روابط خارجية في المتصفح
-                if (url.startsWith("http")) {
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                super.onPageStarted(view, url, favicon);
-                // حقن التوكن مبكراً
-                injectTokenEarly();
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                injectEarlyScripts();
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                if (url.contains("discord.com")) {
-                    injectAllScripts();
-                }
+                injectAfterLoad();
             }
 
             @Override
-            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
-                // لا تمنع أي request
-                return null;
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                if (url.startsWith("https://discord.com") || url.startsWith("https://discordapp.com")) {
+                    return false;
+                }
+                return true;
             }
         });
 
-        // WebChromeClient — صلاحيات الصوت/كاميرا/ملفات
         webView.setWebChromeClient(new WebChromeClient() {
-
             @Override
             public void onPermissionRequest(PermissionRequest request) {
-                // امنح كل الصلاحيات تلقائياً
                 request.grant(request.getResources());
             }
-
-            @Override
-            public boolean onConsoleMessage(ConsoleMessage cm) {
-                Log.d(TAG + "/JS", cm.message() + " [" + cm.sourceId() + ":" + cm.lineNumber() + "]");
-                return true;
-            }
-
-            @Override
-            public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> cb, FileChooserParams p) {
-                filePathCallback = cb;
-                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-                i.addCategory(Intent.CATEGORY_OPENABLE);
-                i.setType("*/*");
-                startActivityForResult(Intent.createChooser(i, "اختر ملف"), REQ_FILE);
-                return true;
-            }
         });
-
-        // تفعيل WebView debugging
-        WebView.setWebContentsDebuggingEnabled(true);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // حقن التوكن مبكراً قبل تحميل الصفحة
-    // ═══════════════════════════════════════════════════════════
-    private void injectTokenEarly() {
-        AccountManager.Account acc = accountManager.getActive();
-        if (acc == null) return;
+    // ──────────────────────────────────────────────────────────────────
+    // JS injection
+    // ──────────────────────────────────────────────────────────────────
 
-        // حقن التوكن في localStorage قبل ما يشوفه Discord
-        String tokenScript =
-            "(function() {" +
-            "  try {" +
-            "    const token = '" + acc.token.replace("'", "\\'") + "';" +
-            // Discord يخزن التوكن بهذه الطريقة
-            "    localStorage.setItem('token', JSON.stringify(token));" +
-            // بعض الإصدارات تستخدم هذا
-            "    document.cookie = 'locale=en-US; path=/';" +
-            // Override navigator.platform لـ Desktop
-            "    Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });" +
-            "    Object.defineProperty(navigator, 'userAgent', { get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' });" +
-            "    Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 });" +
-            // خلي Discord يشوف الجهاز كـ Desktop
-            "    if (!window.__GS_PLATFORM_SET__) {" +
-            "      window.__GS_PLATFORM_SET__ = true;" +
-            "      Object.defineProperty(navigator, 'userAgentData', {" +
-            "        get: () => ({" +
-            "          platform: 'Windows'," +
-            "          mobile: false," +
-            "          brands: [{brand:'Google Chrome',version:'120'},{brand:'Chromium',version:'120'}]" +
-            "        })" +
-            "      });" +
-            "    }" +
-            "  } catch(e) {}" +
+    private void injectEarlyScripts() {
+        // Navigator overrides — must happen before Discord JS runs
+        String nav = "javascript:(function(){" +
+            "try{" +
+            "Object.defineProperty(navigator,'webdriver',{get:()=>false});" +
+            "Object.defineProperty(navigator,'platform',{get:()=>'Win32'});" +
+            "Object.defineProperty(navigator,'maxTouchPoints',{get:()=>0});" +
+            "Object.defineProperty(navigator,'userAgent',{get:()=>" +
+            "'Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'});" +
+            "Object.defineProperty(screen,'width',{get:()=>1920});" +
+            "Object.defineProperty(screen,'height',{get:()=>1080});" +
+            "try{Object.defineProperty(navigator,'userAgentData',{get:()=>({" +
+            "brands:[{brand:'Chromium',version:'122'},{brand:'Google Chrome',version:'122'}]," +
+            "mobile:false,platform:'Windows'," +
+            "getHighEntropyValues:()=>Promise.resolve({platform:'Windows',architecture:'x86'})})});}" +
+            "catch(e){}" +
+            "}catch(e){}" +
             "})();";
 
-        webView.evaluateJavascript(tokenScript, null);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // حقن كل السكريبتات بعد تحميل الصفحة
-    // ═══════════════════════════════════════════════════════════
-    private void injectAllScripts() {
-        // 1. Platform spoof أقوى
-        injectDesktopSpoof();
-
-        // 2. ツcore injector
-        if (!injectorJs.isEmpty()) {
-            webView.evaluateJavascript(injectorJs, null);
+        String token = prefs.getString("active_token", "");
+        String tokenInject = "";
+        if (!token.isEmpty()) {
+            tokenInject = "javascript:(function(){" +
+                "try{localStorage.setItem('token',JSON.stringify('" + token + "'));}catch(e){}" +
+                "})();";
         }
 
-        // 3. Vencord + all plugins
-        webView.evaluateJavascript(vencordJs, null);
-
-        // 4. Fake Deafen إذا كان شغال
-        if (fakeDeafenOn) {
-            injectFakeDeafen(true);
-        }
-
-        tvStatus.post(() -> tvStatus.setText("✓ مدمج"));
+        webView.evaluateJavascript(nav, null);
+        if (!tokenInject.isEmpty()) webView.evaluateJavascript(tokenInject, null);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Desktop Spoof الكامل
-    // ═══════════════════════════════════════════════════════════
-    private void injectDesktopSpoof() {
-        String spoof =
-            "(function() {" +
-            "  if (window.__GS_SPOOF_DONE__) return;" +
-            "  window.__GS_SPOOF_DONE__ = true;" +
+    private void injectAfterLoad() {
+        injectDiscordInternalSpoof();
+        if (vencordEnabled) webView.evaluateJavascript(buildVencordLoader(), null);
+        if (fakeDeafenActive) injectFakeDeafen(true);
+        if (arabicEnabled) injectArabic(true);
+        applyTheme(currentTheme);
+    }
 
-            // Navigator overrides
-            "  const props = {" +
-            "    platform:      { value: 'Win32', writable:false }," +
-            "    maxTouchPoints:{ value: 0, writable:false }," +
-            "    userAgent:     { value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', writable:false }" +
-            "  };" +
-            "  Object.keys(props).forEach(k => {" +
-            "    try { Object.defineProperty(navigator, k, props[k]); } catch(e) {}" +
-            "  });" +
-
-            // UserAgentData
-            "  try {" +
-            "    Object.defineProperty(navigator, 'userAgentData', {" +
-            "      value: {" +
-            "        platform: 'Windows'," +
-            "        mobile: false," +
-            "        brands: [" +
-            "          { brand: 'Google Chrome', version: '120' }," +
-            "          { brand: 'Chromium',      version: '120' }," +
-            "          { brand: 'Not?A_Brand',   version: '24'  }" +
-            "        ]," +
-            "        getHighEntropyValues: (hints) => Promise.resolve({" +
-            "          platform: 'Windows'," +
-            "          platformVersion: '10.0.0'," +
-            "          architecture: 'x86'," +
-            "          bitness: '64'," +
-            "          mobile: false" +
-            "        })" +
-            "      }," +
-            "      writable: false" +
-            "    });" +
-            "  } catch(e) {}" +
-
-            // Screen — ابدو زي شاشة PC
-            "  try {" +
-            "    Object.defineProperty(window, 'screen', {" +
-            "      value: Object.create(window.screen, {" +
-            "        width:       { get: () => 1920 }," +
-            "        height:      { get: () => 1080 }," +
-            "        availWidth:  { get: () => 1920 }," +
-            "        availHeight: { get: () => 1040 }," +
-            "        colorDepth:  { get: () => 24  }," +
-            "        pixelDepth:  { get: () => 24  }" +
-            "      })" +
-            "    });" +
-            "  } catch(e) {}" +
-
-            // Discord internal — يخلي الـ API يشوفك desktop
-            "  try {" +
-            "    const findModule = (filter) => {" +
-            "      const wpRequire = window.webpackChunkdiscord_app?.push([[Symbol()], {}, r => r]);" +
-            "      if (!wpRequire) return null;" +
-            "      const modules = Object.values(wpRequire.m || {});" +
-            "      for (const m of modules) {" +
-            "        try {" +
-            "          const exp = m && m.exports;" +
-            "          if (exp && filter(exp)) return exp;" +
-            "          if (exp && exp.default && filter(exp.default)) return exp.default;" +
-            "        } catch(e) {}" +
-            "      }" +
-            "      return null;" +
-            "    };" +
-
-            // Override Discord's getPlatformType
-            "    setTimeout(() => {" +
-            "      try {" +
-            "        const browserInfo = findModule(m => m.getPlatformType || m.getOS);" +
-            "        if (browserInfo) {" +
-            "          if (browserInfo.getPlatformType) browserInfo.getPlatformType = () => 'web';" +
-            "          if (browserInfo.isDesktop)       browserInfo.isDesktop = () => true;" +
-            "          if (browserInfo.isMobile)        browserInfo.isMobile  = () => false;" +
-            "          console.log('[GroupStar] Desktop spoof: Discord internals patched');" +
-            "        }" +
-            "      } catch(e) {}" +
-            "    }, 2000);" +
-            "  } catch(e) {}" +
-
+    private void injectDiscordInternalSpoof() {
+        String js = "javascript:(function(){" +
+            "try{" +
+            "var req=webpackChunkdiscord_app&&webpackChunkdiscord_app.push([[Math.random()]," +
+            "{},function(e){var r={};for(var t in e.c){try{var n=e.c[t].exports;" +
+            "if(n&&n.default&&typeof n.default.getPlatformType==='function'){" +
+            "n.default.getPlatformType=function(){return 'desktop';};" +
+            "n.default.isDesktop=function(){return true;};" +
+            "n.default.isMobile=function(){return false;};}" +
+            "}catch(err){}}}]);" +
+            "}catch(e){}" +
             "})();";
-
-        webView.evaluateJavascript(spoof, null);
+        webView.evaluateJavascript(js, null);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Fake Deafen
-    // تظهر للكل أنك ديفن (صامت عن السماع) لكن في الحقيقة:
-    // - تسمع الكل
-    // - تقدر تتكلم إذا فتحت المايك
-    // ═══════════════════════════════════════════════════════════
     private void injectFakeDeafen(boolean enable) {
-        String script;
+        String js;
         if (enable) {
-            script =
-                "(function() {" +
-                "  if (window.__GS_FAKE_DEAFEN__) return;" +
-                "  window.__GS_FAKE_DEAFEN__ = true;" +
-
-                "  const patchDiscordDeafen = () => {" +
-                "    try {" +
-                "      const wpChunk = window.webpackChunkdiscord_app;" +
-                "      if (!wpChunk) return setTimeout(patchDiscordDeafen, 500);" +
-
-                "      let rtcPatched = false;" +
-
-                // البحث عن MediaDeviceDispatcher أو RTCConnectionManager
-                "      const req = wpChunk.push([[Symbol()], {}, r => r]);" +
-                "      const modules = Object.values(req.m || {});" +
-
-                "      for (const factory of modules) {" +
-                "        try {" +
-                "          const m = factory.toString();" +
-                // نبحث عن الكود اللي يتحكم في الـ deafen
-                "          if (m.includes('selfDeaf') || m.includes('selfMute')) {" +
-                "            console.log('[GroupStar] Found deafen module, patching...');" +
-                "          }" +
-                "        } catch(e) {}" +
-                "      }" +
-
-                // الطريقة المضمونة: override الـ WebSocket messages
-                "      const origSend = WebSocket.prototype.send;" +
-                "      WebSocket.prototype.send = function(data) {" +
-                "        if (typeof data === 'string') {" +
-                "          try {" +
-                "            const msg = JSON.parse(data);" +
-                // op 4 = Voice State Update في Discord Gateway
-                "            if (msg && msg.op === 4 && msg.d) {" +
-                "              const isDeafenMsg = msg.d.self_deaf !== undefined;" +
-                "              if (isDeafenMsg && !window.__GS_FAKE_DEAFEN_ACTIVE__) {" +
-                "                window.__GS_FAKE_DEAFEN_ACTIVE__ = false;" +
-                "              }" +
-                "              if (window.__GS_FAKE_DEAFEN_ACTIVE__) {" +
-                // نرسل deafen = true للـ API (يشوفك الكل ديفن)
-                // لكن نمنع Discord من فعلاً يصمّت الصوت
-                "                const fakemsg = JSON.parse(JSON.stringify(msg));" +
-                "                fakemsg.d.self_deaf = true;" +
-                "                fakemsg.d.self_mute = false;" + // مايك مفتوح
-                "                return origSend.call(this, JSON.stringify(fakemsg));" +
-                "              }" +
-                "            }" +
-                "          } catch(e) {}" +
-                "        }" +
-                "        return origSend.call(this, data);" +
-                "      };" +
-
-                // منع Discord من يصمّت الـ AudioContext عند الديفن
-                "      const origGain = AudioContext.prototype.createGain || window.AudioContext.prototype.createGain;" +
-                "      if (origGain) {" +
-                "        window.__GS_AUDIO_GAINS__ = [];" +
-                "        AudioContext.prototype.createGain = function() {" +
-                "          const gain = origGain.call(this);" +
-                "          window.__GS_AUDIO_GAINS__.push(gain);" +
-                "          Object.defineProperty(gain.gain, 'value', {" +
-                "            get() { return this._gsValue !== undefined ? this._gsValue : 1; }," +
-                "            set(v) {" +
-                "              this._gsValue = v;" +
-                "              if (window.__GS_FAKE_DEAFEN_ACTIVE__ && v === 0) {" +
-                // إذا Discord حاول يصمّت الصوت — امنعه
-                "                console.log('[GroupStar] FakeDeafen: blocked audio mute');" +
-                "                return;" +
-                "              }" +
-                "              Object.getOwnPropertyDescriptor(AudioParam.prototype, 'value').set.call(this, v);" +
-                "            }" +
-                "          });" +
-                "          return gain;" +
-                "        };" +
-                "      }" +
-
-                "      console.log('[GroupStar] FakeDeafen: patched ✓');" +
-                "    } catch(e) { console.error('[GroupStar] FakeDeafen error:', e); setTimeout(patchDiscordDeafen, 1000); }" +
-                "  };" +
-
-                "  patchDiscordDeafen();" +
+            js = "javascript:(function(){" +
+                "if(window._fakeDeafenPatch)return;" +
+                "window._fakeDeafenPatch=true;" +
+                // Intercept WebSocket send — force self_deaf:true but self_mute:false
+                "var origSend=WebSocket.prototype.send;" +
+                "WebSocket.prototype.send=function(data){" +
+                "  try{" +
+                "    var parsed=JSON.parse(data);" +
+                "    if(parsed.op===4&&parsed.d){" +
+                "      parsed.d.self_deaf=true;" +
+                "      parsed.d.self_mute=false;" +
+                "      data=JSON.stringify(parsed);" +
+                "    }" +
+                "  }catch(e){}" +
+                "  origSend.call(this,data);" +
+                "};" +
+                // Block Discord from muting audio via gain=0
+                "var origCreateGain=AudioContext.prototype.createGain;" +
+                "AudioContext.prototype.createGain=function(){" +
+                "  var g=origCreateGain.call(this);" +
+                "  var origSetter=Object.getOwnPropertyDescriptor(GainNode.prototype,'gain');" +
+                "  Object.defineProperty(g,'gain',{" +
+                "    get:function(){return origSetter.get.call(g);}," +
+                "    set:function(v){if(v>0.01)origSetter.set&&origSetter.set.call(g,v);}," +
+                "    configurable:true" +
+                "  });" +
+                "  return g;" +
+                "};" +
                 "})();";
-
-            webView.evaluateJavascript(script, null);
-
-            // فعّل الـ fake deafen في Discord
-            webView.evaluateJavascript(
-                "(function() { window.__GS_FAKE_DEAFEN_ACTIVE__ = true;" +
-                // ضغط زر الديفن في Discord UI
-                "  setTimeout(() => {" +
-                "    const deafBtn = document.querySelector('[aria-label=\"Deafen\"], button[aria-label*=\"deaf\" i]');" +
-                "    if (deafBtn && !deafBtn.classList.contains('active')) deafBtn.click();" +
-                // أو عبر WebSocket مباشرة
-                "    try {" +
-                "      const ws = window.__GS_WS__ || Array.from(window.__wsMap||[]).find(w => w.url?.includes('gateway.discord'));" +
-                "      if (ws) {" +
-                "        const currentState = window.__GS_VOICE_STATE__ || {};" +
-                "        ws.send(JSON.stringify({ op:4, d:{ guild_id: currentState.guild_id||null, channel_id: currentState.channel_id||null, self_mute: false, self_deaf: true }}));" +
-                "      }" +
-                "    } catch(e) {}" +
-                "  }, 500);" +
-                "})();",
-                null
-            );
-
         } else {
-            // إيقاف الفيك ديفن
-            script =
-                "(function() {" +
-                "  window.__GS_FAKE_DEAFEN_ACTIVE__ = false;" +
-                "  window.__GS_FAKE_DEAFEN__ = false;" +
-                // رفع الديفن
-                "  setTimeout(() => {" +
-                "    const deafBtn = document.querySelector('[aria-label=\"Deafen\"], button[aria-label*=\"deaf\" i]');" +
-                "    if (deafBtn && deafBtn.getAttribute('aria-checked') === 'true') deafBtn.click();" +
-                "  }, 200);" +
+            js = "javascript:(function(){window._fakeDeafenPatch=false;" +
+                "delete window._fakeDeafenPatch;})();";
+        }
+        webView.evaluateJavascript(js, null);
+    }
+
+    private String buildVencordLoader() {
+        return "(function(){" +
+            "if(window._vencordLoaded)return;" +
+            "window._vencordLoaded=true;" +
+            "var s=document.createElement('script');" +
+            "s.src='https://raw.githack.com/Vendicated/Vencord/main/browser/browser.js';" +
+            "s.onload=function(){" +
+            "  try{" +
+            "    var plugins=Object.keys(Vencord.Plugins.plugins);" +
+            "    plugins.forEach(function(name){" +
+            "      try{Vencord.Settings.plugins[name].enabled=true;}catch(e){}" +
+            "    });" +
+            "    GSBridge.onVencordReady(plugins.join(','));" +
+            "  }catch(e){}" +
+            "};" +
+            "document.head.appendChild(s);" +
+            "})();";
+    }
+
+    private void injectArabic(boolean enable) {
+        if (enable) {
+            String js = "javascript:(function(){" +
+                "try{" +
+                "document.documentElement.setAttribute('lang','ar');" +
+                "document.documentElement.setAttribute('dir','rtl');" +
+                // Try Vencord locale if available
+                "try{Vencord.Webpack.findByProps('setLocale').setLocale('ar');}catch(e){}" +
+                "}catch(e){}" +
                 "})();";
-            webView.evaluateJavascript(script, null);
+            webView.evaluateJavascript(js, null);
+        } else {
+            String js = "javascript:(function(){" +
+                "document.documentElement.setAttribute('lang','en-US');" +
+                "document.documentElement.setAttribute('dir','ltr');" +
+                "try{Vencord.Webpack.findByProps('setLocale').setLocale('en-US');}catch(e){}" +
+                "})();";
+            webView.evaluateJavascript(js, null);
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // تحميل Discord
-    // ═══════════════════════════════════════════════════════════
-    private void loadDiscord() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Accept-Language", "en-US,en;q=0.9");
-        webView.loadUrl("https://discord.com/app", headers);
-        tvStatus.setText("جار التحميل...");
+    private void applyTheme(String theme) {
+        String css;
+        switch (theme) {
+            case "onedark":
+                css = ":root{--background-primary:#282c34!important;--background-secondary:#21252b!important;" +
+                      "--background-tertiary:#1d2026!important;--text-normal:#abb2bf!important;}";
+                break;
+            case "midnight":
+                css = ":root{--background-primary:#0d0d0d!important;--background-secondary:#111111!important;" +
+                      "--background-tertiary:#0a0a0a!important;--text-normal:#ffffff!important;}";
+                break;
+            case "purple":
+                css = ":root{--background-primary:#1a0a2e!important;--background-secondary:#12001f!important;" +
+                      "--background-tertiary:#0d0015!important;--text-normal:#d8b4fe!important;}";
+                break;
+            default: // discord default
+                css = "";
+                break;
+        }
+        if (!css.isEmpty()) {
+            String js = "javascript:(function(){" +
+                "var id='_gsTheme';" +
+                "var el=document.getElementById(id);" +
+                "if(!el){el=document.createElement('style');el.id=id;document.head.appendChild(el);}" +
+                "el.textContent=" + escapeJs(css) + ";" +
+                "})();";
+            webView.evaluateJavascript(js, null);
+        } else {
+            webView.evaluateJavascript(
+                "javascript:(function(){var el=document.getElementById('_gsTheme');if(el)el.remove();})();", null);
+        }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // الأزرار
-    // ═══════════════════════════════════════════════════════════
-    private void setupButtons() {
+    private String escapeJs(String s) {
+        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"";
+    }
 
-        // ── زر Fake Deafen ────────────────────────────────────
-        btnFakeDeafen.setOnClickListener(v -> {
-            fakeDeafenOn = !fakeDeafenOn;
-            updateFakeDeafenUI();
-            injectFakeDeafen(fakeDeafenOn);
+    // ──────────────────────────────────────────────────────────────────
+    // Panel controls
+    // ──────────────────────────────────────────────────────────────────
 
-            String msg = fakeDeafenOn ? "🔇 فيك ديفن شغال" : "🔊 فيك ديفن مطفي";
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    private void bindPanelControls() {
+        btnCordTab.setOnClickListener(v -> toggleCordPanel());
+        btnNukerTab.setOnClickListener(v -> {
+            // Close cord panel if open, then open nuker
+            if (cordPanelOpen) closeCordPanel();
+            openNuker();
         });
 
-        // ── زر المايك (يعمل حتى داخل فيك ديفن) ───────────────
-        btnMic.setOnClickListener(v -> {
-            micUnlocked = !micUnlocked;
-            updateMicUI();
+        switchFakeDeafen.setOnCheckedChangeListener((b, checked) -> {
+            fakeDeafenActive = checked;
+            injectFakeDeafen(checked);
+        });
 
-            String micScript;
-            if (micUnlocked) {
-                // فكّ المايك — تقدر تتكلم
-                micScript =
-                    "try {" +
-                    "  const mutBtn = document.querySelector('[aria-label=\"Mute\"], button[aria-label*=\"mute\" i]');" +
-                    "  const isMuted = mutBtn && (mutBtn.getAttribute('aria-checked')==='true' || mutBtn.classList.contains('muted'));" +
-                    "  if (isMuted && mutBtn) mutBtn.click();" +
-                    // override self_mute في gateway
-                    "  window.__GS_MIC_OPEN__ = true;" +
-                    "} catch(e) {}";
-            } else {
-                micScript =
-                    "try {" +
-                    "  window.__GS_MIC_OPEN__ = false;" +
-                    "} catch(e) {}";
+        switchDesktopSpoof.setOnCheckedChangeListener((b, checked) -> {
+            desktopSpoof = checked;
+            if (checked) injectDiscordInternalSpoof();
+        });
+
+        switchVencord.setOnCheckedChangeListener((b, checked) -> {
+            vencordEnabled = checked;
+            if (checked) webView.evaluateJavascript(buildVencordLoader(), null);
+        });
+
+        switchArabic.setOnCheckedChangeListener((b, checked) -> {
+            arabicEnabled = checked;
+            injectArabic(checked);
+        });
+
+        // Theme buttons
+        bindTheme(R.id.themeDefault,  "default");
+        bindTheme(R.id.themeOneDark,  "onedark");
+        bindTheme(R.id.themeMidnight, "midnight");
+        bindTheme(R.id.themePurple,   "purple");
+
+        findViewById(R.id.btnManageAccounts).setOnClickListener(v -> showAccountsMenu());
+    }
+
+    private void bindTheme(int viewId, String theme) {
+        View v = findViewById(viewId);
+        if (v != null) v.setOnClickListener(x -> {
+            currentTheme = theme;
+            applyTheme(theme);
+        });
+    }
+
+    private void toggleCordPanel() {
+        if (cordPanelOpen) closeCordPanel();
+        else openCordPanel();
+    }
+
+    private void openCordPanel() {
+        cordPanelOpen = true;
+        cordPanel.setVisibility(View.VISIBLE);
+        ObjectAnimator.ofFloat(cordPanel, "translationX", 240f * getResources().getDisplayMetrics().density / 160f, 0f)
+            .setDuration(250).start();
+        // Rotate arrow
+        ImageView arrow = btnCordTab.findViewById(R.id.arrowCord);
+        if (arrow != null) arrow.setRotation(180f);
+    }
+
+    private void closeCordPanel() {
+        cordPanelOpen = false;
+        float width = 240f * getResources().getDisplayMetrics().density / 160f;
+        ObjectAnimator anim = ObjectAnimator.ofFloat(cordPanel, "translationX", 0f, width);
+        anim.setDuration(220);
+        anim.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator a) {
+                cordPanel.setVisibility(View.GONE);
             }
-            webView.evaluateJavascript(micScript, null);
-
-            Toast.makeText(this, micUnlocked ? "🎤 مايك مفتوح" : "🎤 مايك مغلق", Toast.LENGTH_SHORT).show();
         });
-
-        // ── زر الحسابات ───────────────────────────────────────
-        btnAccounts.setOnClickListener(v -> showAccountsMenu());
+        anim.start();
+        ImageView arrow = btnCordTab.findViewById(R.id.arrowCord);
+        if (arrow != null) arrow.setRotation(0f);
     }
 
-    private void updateFakeDeafenUI() {
-        btnFakeDeafen.setImageResource(
-            fakeDeafenOn ? R.drawable.ic_deafen_on : R.drawable.ic_deafen_off
-        );
-        btnFakeDeafen.setColorFilter(
-            fakeDeafenOn
-                ? getColor(R.color.accent_red)
-                : getColor(R.color.accent_white)
-        );
+    private void openNuker() {
+        startActivity(new Intent(this, NukerActivity.class));
     }
 
-    private void updateMicUI() {
-        btnMic.setImageResource(
-            micUnlocked ? R.drawable.ic_mic_on : R.drawable.ic_mic_off
-        );
-        btnMic.setColorFilter(
-            micUnlocked
-                ? getColor(R.color.accent_green)
-                : getColor(R.color.accent_white)
-        );
+    // ──────────────────────────────────────────────────────────────────
+    // Accounts
+    // ──────────────────────────────────────────────────────────────────
+
+    private void loadAccounts() {
+        String json = prefs.getString("accounts", "[]");
+        Type type = new TypeToken<List<String[]>>(){}.getType();
+        accounts = gson.fromJson(json, type);
+        if (accounts == null) accounts = new ArrayList<>();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // قائمة الحسابات
-    // ═══════════════════════════════════════════════════════════
+    private void saveAccounts() {
+        prefs.edit().putString("accounts", gson.toJson(accounts)).apply();
+    }
+
     private void showAccountsMenu() {
-        var accounts = accountManager.getAll();
-        String[] names = new String[accounts.size() + 2];
-
-        for (int i = 0; i < accounts.size(); i++) {
-            names[i] = (i == accountManager.getActiveIndex() ? "✓ " : "   ") + accounts.get(i).nickname;
-        }
-        names[accounts.size()]     = "+ إضافة حساب جديد";
-        names[accounts.size() + 1] = "✏ تعديل الأسماء";
+        List<String> names = new ArrayList<>();
+        for (String[] acc : accounts) names.add(acc[0]);
+        names.add("+ Add Account");
 
         new AlertDialog.Builder(this)
-            .setTitle("الحسابات")
-            .setItems(names, (dialog, which) -> {
-                if (which < accounts.size()) {
-                    // تبديل حساب
-                    AccountManager.Account acc = accountManager.switchTo(which);
-                    if (acc != null) {
-                        switchAccount(acc);
-                    }
-                } else if (which == accounts.size()) {
-                    // إضافة حساب جديد
-                    startActivity(new Intent(this, TokenLoginActivity.class));
+            .setTitle("Accounts")
+            .setItems(names.toArray(new String[0]), (dialog, which) -> {
+                if (which == accounts.size()) {
+                    addAccountDialog();
+                } else {
+                    switchAccount(accounts.get(which)[1]);
+                }
+            }).show();
+    }
+
+    private void addAccountDialog() {
+        android.widget.EditText etName  = new android.widget.EditText(this);
+        etName.setHint("Account name");
+        android.widget.EditText etToken = new android.widget.EditText(this);
+        etToken.setHint("Discord token");
+        etToken.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            | android.text.InputType.TYPE_CLASS_TEXT);
+
+        LinearLayout ll = new LinearLayout(this);
+        ll.setOrientation(LinearLayout.VERTICAL);
+        ll.setPadding(48, 16, 48, 0);
+        ll.addView(etName);
+        ll.addView(etToken);
+
+        new AlertDialog.Builder(this)
+            .setTitle("Add Account")
+            .setView(ll)
+            .setPositiveButton("Add", (d, w) -> {
+                String name  = etName.getText().toString().trim();
+                String token = etToken.getText().toString().trim();
+                if (!name.isEmpty() && !token.isEmpty()) {
+                    accounts.add(new String[]{name, token});
+                    saveAccounts();
                 }
             })
+            .setNegativeButton("Cancel", null)
             .show();
     }
 
-    private void switchAccount(AccountManager.Account acc) {
-        Toast.makeText(this, "جار التبديل إلى " + acc.nickname, Toast.LENGTH_SHORT).show();
-
-        // امسح الـ cookies وlocalstorage وحط التوكن الجديد
+    private void switchAccount(String token) {
+        prefs.edit().putString("active_token", token).apply();
         webView.evaluateJavascript(
-            "(function() {" +
-            "  localStorage.clear();" +
-            "  sessionStorage.clear();" +
-            "  const newToken = '" + acc.token.replace("'", "\\'") + "';" +
-            "  localStorage.setItem('token', JSON.stringify(newToken));" +
-            "  window.location.reload();" +
-            "})();",
-            null
-        );
+            "javascript:(function(){" +
+            "localStorage.setItem('token',JSON.stringify('" + token + "'));" +
+            "window.location.reload();" +
+            "})();", null);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // JS Bridge — التواصل بين JavaScript والـ Android
-    // ═══════════════════════════════════════════════════════════
-    private class GSBridge {
+    // ──────────────────────────────────────────────────────────────────
+    // JS Bridge
+    // ──────────────────────────────────────────────────────────────────
 
-        @JavascriptInterface
+    class GSBridge {
+        @android.webkit.JavascriptInterface
         public void onVencordReady(String plugins) {
-            int count = plugins.split(",").length;
-            runOnUiThread(() -> {
-                tvStatus.setText("✓ Vencord " + count + " plugin");
-                Toast.makeText(MainActivity.this, "Vencord جاهز — " + count + " بلاقن", Toast.LENGTH_SHORT).show();
-            });
+            // Vencord loaded — plugins list passed back
         }
 
-        @JavascriptInterface
-        public void log(String msg) {
-            Log.d(TAG + "/JS", msg);
-        }
-
-        @JavascriptInterface
+        @android.webkit.JavascriptInterface
         public String getToken() {
-            AccountManager.Account acc = accountManager.getActive();
-            return acc != null ? acc.token : "";
+            return prefs.getString("active_token", "");
         }
 
-        @JavascriptInterface
+        @android.webkit.JavascriptInterface
         public boolean isFakeDeafenActive() {
-            return fakeDeafenOn;
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // صلاحيات
-    // ═══════════════════════════════════════════════════════════
-    private void requestAudioPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                new String[]{ Manifest.permission.RECORD_AUDIO }, REQ_AUDIO);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int req, @NonNull String[] perms, @NonNull int[] results) {
-        super.onRequestPermissionsResult(req, perms, results);
-    }
-
-    @Override
-    protected void onActivityResult(int req, int res, Intent data) {
-        super.onActivityResult(req, res, data);
-        if (req == REQ_FILE) {
-            if (filePathCallback != null) {
-                Uri[] uris = (data != null && data.getData() != null)
-                    ? new Uri[]{ data.getData() } : null;
-                filePathCallback.onReceiveValue(uris);
-                filePathCallback = null;
-            }
+            return fakeDeafenActive;
         }
     }
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack()) {
+        if (cordPanelOpen) {
+            closeCordPanel();
+        } else if (webView.canGoBack()) {
             webView.goBack();
         } else {
             super.onBackPressed();
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        webView.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        webView.onPause();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        webView.destroy();
     }
 }
