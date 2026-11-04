@@ -1,0 +1,115 @@
+name: Build DsCome Host APK
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'BotHost-App/**'
+  workflow_dispatch:
+
+jobs:
+  build-bothost:
+    name: Build DsCome Host APK (Kivy)
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            git zip unzip openjdk-17-jdk \
+            libffi-dev libssl-dev \
+            autoconf automake libtool \
+            build-essential ccache \
+            libltdl-dev libgmp-dev \
+            libmpc-dev libmpfr-dev \
+            libgdbm-dev libc6-dev \
+            zlib1g-dev libncurses5-dev \
+            lzma liblzma-dev \
+            libreadline-dev \
+            libbz2-dev libsqlite3-dev \
+            cmake ninja-build
+
+      - name: Install buildozer + Cython
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install buildozer cython==0.29.37
+
+      - name: Cache buildozer global
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: buildozer-global-${{ runner.os }}-v1
+
+      - name: Build APK
+        working-directory: BotHost-App
+        run: |
+          buildozer -v android debug 2>&1 | tee build.log
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+
+      - name: Collect APK
+        run: |
+          mkdir -p artifacts
+          APK=$(find BotHost-App/bin -name "*.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "APK not found — build log tail:"
+            tail -50 BotHost-App/build.log
+            exit 1
+          fi
+          cp "$APK" artifacts/DsCome-Host.apk
+          ls -lh artifacts/
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DsCome-Host-APK
+          path: artifacts/DsCome-Host.apk
+          retention-days: 30
+
+      - name: Release APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: bothost-v${{ github.run_number }}
+          name: "DsCome Host v${{ github.run_number }}"
+          body: |
+            ## DsCome Host — Bot Hosting Manager
+
+            | Feature | Description |
+            |---------|-------------|
+            | 🤖 Multi-Bot | Host up to 100 bots simultaneously |
+            | 🔄 Auto-Restart | Bots restart automatically on crash |
+            | 🛠️ Auto-Fix | Fixes common bot file issues automatically |
+            | 📋 Live Logs | View real-time logs per bot |
+            | 💾 State Save | Bots restored after app restart |
+
+            ### Supported Languages
+            Python • JavaScript • TypeScript • C++ • Rust • Go • Java • Ruby • PHP
+
+            ### Requirements
+            - Android 7.0+ (API 24+)
+            - Enable **Unknown Sources** in settings
+
+            ### How to use
+            1. Download `DsCome-Host.apk`
+            2. Install it
+            3. Tap **+ Add Bot**
+            4. Enter bot name, file path, and token
+            5. Done!
+
+            > Nuker Rights : DsCome | Dev : Blast & DsCome
+          files: artifacts/DsCome-Host.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
